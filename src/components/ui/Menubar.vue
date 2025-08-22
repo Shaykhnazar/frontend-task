@@ -21,7 +21,9 @@ function handleClick(route: string) {
 
 const menuItems = [
   {
-    name: 'Home', value: 'Home', route: 'home' },
+    name: 'Home', value: 'Home', route: 'home', children: [{
+      name: 'Analytics Dashboard', value: 'Analytics Dashboard', route: 'analytics-dashboard'
+    }]},
   { 
     name: 'Users', value: 'Users', children: [{ 
       name: 'List', value: 'List', route: 'users'

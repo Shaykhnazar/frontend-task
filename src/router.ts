@@ -17,6 +17,11 @@ const router = createRouter({
             path: '/products',
             name: 'products',
             component: () => import('./components/ProductManagement.vue')
+        },
+        {
+            path: '/analytics-dashboard',
+            name: 'analytics-dashboard',
+            component: () => import('./components/AnalyticsDashboard.vue')
         }
     ]
 })

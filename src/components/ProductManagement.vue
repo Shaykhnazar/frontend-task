@@ -1,29 +1,14 @@
 <script setup lang="ts">
 import { createColumnHelper } from '@tanstack/vue-table'
 import { ref, reactive, computed, h } from 'vue'
+import { useProductStore, type Product } from '../stores/products'
 import DataTable from './DataTable.vue'
 import Button from './ui/Button.vue'
 import Input from './ui/Input.vue'
 import Label from './ui/Label.vue'
 import ConfirmActionDialog from './ConfirmActionDialog.vue'
 
-// Types
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  stockQuantity: number;
-  status: "in_stock" | "out_of_stock" | "discontinued";
-  createdAt?: string;
-}
-
-// Data
-const products = ref<Product[]>([
-  { id: 1, name: 'JProduct 1', category: 'Category 1', price: 9.99, stockQuantity: 10, status: 'in_stock' },
-  { id: 2, name: 'Product 2', category: 'Category 2', price: 19.99, stockQuantity: 5, status: 'out_of_stock' },
-  { id: 3, name: 'Product 3', category: 'Category 3', price: 29.99, stockQuantity: 0, status: 'discontinued' },
-])
+const productStore = useProductStore()
 
 const loading = ref(false)
 const showProductForm = ref(false)
@@ -35,8 +20,8 @@ const productToDelete = ref<Product | null>(null)
 const productForm = reactive({
   name: '',
   category: '',
-  price: 0 as number,
-  stockQuantity: 0 as number,
+  price: '0',
+  stockQuantity: '0',
   status: 'in_stock' as Product['status'],
   createdAt: '',
 })
@@ -118,8 +103,8 @@ const isEditing = computed(() => editingProduct.value !== null)
 const resetForm = () => {
   productForm.name = ''
   productForm.category = ''
-  productForm.price = 0
-  productForm.stockQuantity = 0
+  productForm.price = '0'
+  productForm.stockQuantity = '0'
   productForm.status = 'in_stock'
 }
 
@@ -133,46 +118,41 @@ const editProduct = (product: Product) => {
   editingProduct.value = product
   productForm.name = product.name
   productForm.category = product.category
-  productForm.price = product.price
-  productForm.stockQuantity = product.stockQuantity
+  productForm.price = product.price.toString()
+  productForm.stockQuantity = product.stockQuantity.toString()
   productForm.status = product.status
   showProductForm.value = true
 }
 
 const saveProduct = () => {
-  if (!productForm.name || !productForm.category || !productForm.price || !productForm.stockQuantity) return
+  const price = parseFloat(productForm.price)
+  const stock = parseInt(productForm.stockQuantity)
+  
+  if (!productForm.name || !productForm.category || price <= 0 || stock < 0) return
 
   loading.value = true
 
-  // Simulate API call
   setTimeout(() => {
     if (isEditing.value && editingProduct.value) {
-      // Update existing user
-      const index = products.value.findIndex(u => u.id === editingProduct.value!.id)
-      if (index !== -1) {
-        products.value[index] = {
-          ...editingProduct.value,
-          name: productForm.name,
-          category: productForm.category,
-          price: productForm.price,
-          stockQuantity: productForm.stockQuantity,
-          status: productForm.status,
-        }
-      }
-    } else {
-      // Add new product
-      const newProduct: Product = {
-        id: Math.max(...products.value.map(u => u.id)) + 1,
+      productStore.updateProduct(editingProduct.value.id, {
         name: productForm.name,
         category: productForm.category,
-        price: productForm.price,
-        stockQuantity: productForm.stockQuantity,
+        price: price,
+        stockQuantity: stock,
         status: productForm.status,
-        createdAt: new Date().toISOString(),
-      }
-      products.value.push(newProduct)
+      })
+    } else {
+      productStore.addProduct({
+        name: productForm.name,
+        category: productForm.category,
+        price: price,
+        stockQuantity: stock,
+        status: productForm.status,
+      })
+      console.log('Added product, store now has:', productStore.products.length, 'products')
     }
 
+    resetForm()
     loading.value = false
     showProductForm.value = false
     editingProduct.value = null
@@ -186,7 +166,7 @@ const confirmDelete = (product: Product) => {
 
 const deleteUser = () => {
   if (productToDelete.value) {
-    products.value = products.value.filter(u => u.id !== productToDelete.value!.id)
+    productStore.deleteProduct(productToDelete.value.id)
     productToDelete.value = null
     showDeleteDialog.value = false
   }
@@ -210,7 +190,7 @@ const cancelForm = () => {
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Product Management</h1>
-        <p class="text-gray-500">Manage products </p>
+        <p class="text-gray-500">Manage products</p>
       </div>
       <Button @click="openproductForm" class="bg-blue-600 hover:bg-blue-700">
         Add New Product
@@ -219,7 +199,7 @@ const cancelForm = () => {
 
     <!-- Product Table -->
     <div class="bg-white rounded-lg shadow">
-      <DataTable :data="products" :columns="columns" :loading="false" />
+      <DataTable :data="productStore.products" :columns="columns" :loading="false" />
     </div>
 
     <!-- User Form Modal -->
@@ -237,7 +217,7 @@ const cancelForm = () => {
 
           <div>
             <Label for="category">Category</Label>
-            <select name="category" id="category"
+            <select name="category" id="category" v-model="productForm.category"
               class="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <option value="Shoes">Shoes</option>
               <option value="Clothing">Clothing</option>
@@ -247,19 +227,19 @@ const cancelForm = () => {
 
           <div>
             <Label for="price">Price</Label>
-            <Input id="price" v-model.number="productForm.price" type="number" placeholder="Enter price" required class="mt-1" step="0.01" min="0" max="99999.99" />
+            <Input id="price" v-model="productForm.price" type="number" placeholder="Enter price" required class="mt-1" step="0.01" min="0" max="99999.99" />
           </div>
 
           <div>
             <Label for="stockQuantity">Stock Quantity</Label>
-            <Input id="stockQuantity" v-model.number="productForm.stockQuantity" type="number"
+            <Input id="stockQuantity" v-model="productForm.stockQuantity" type="number"
               placeholder="Enter stock quantity" required class="mt-1" />
           </div>
 
 
           <div>
             <Label for="status">Status</Label>
-            <select name="status" id="status"
+            <select name="status" id="status" v-model="productForm.status"
               class="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <option value="in_stock">In Stock</option>
               <option value="out_of_stock">Out of Stock</option>
