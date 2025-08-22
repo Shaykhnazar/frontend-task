@@ -35,9 +35,9 @@ const productToDelete = ref<Product | null>(null)
 const productForm = reactive({
   name: '',
   category: '',
-  price: 0,
-  stockQuantity: 0,
-  status: "in_stock",
+  price: 0 as number,
+  stockQuantity: 0 as number,
+  status: 'in_stock' as Product['status'],
   createdAt: '',
 })
 
@@ -153,6 +153,10 @@ const saveProduct = () => {
         products.value[index] = {
           ...editingProduct.value,
           name: productForm.name,
+          category: productForm.category,
+          price: productForm.price,
+          stockQuantity: productForm.stockQuantity,
+          status: productForm.status,
         }
       }
     } else {
@@ -163,8 +167,8 @@ const saveProduct = () => {
         category: productForm.category,
         price: productForm.price,
         stockQuantity: productForm.stockQuantity,
-        status: productForm.status || 'in_stock',
-        createdAt: new Date().toISOString().split('T')[0]
+        status: productForm.status,
+        createdAt: new Date().toISOString(),
       }
       products.value.push(newProduct)
     }
@@ -243,12 +247,12 @@ const cancelForm = () => {
 
           <div>
             <Label for="price">Price</Label>
-            <Input id="price" v-model="productForm.price" type="number" placeholder="Enter price" required class="mt-1" step="0.01" min="0" max="99999.99" />
+            <Input id="price" v-model.number="productForm.price" type="number" placeholder="Enter price" required class="mt-1" step="0.01" min="0" max="99999.99" />
           </div>
 
           <div>
             <Label for="stockQuantity">Stock Quantity</Label>
-            <Input id="stockQuantity" v-model="productForm.stockQuantity" type="number"
+            <Input id="stockQuantity" v-model.number="productForm.stockQuantity" type="number"
               placeholder="Enter stock quantity" required class="mt-1" />
           </div>
 
